@@ -82,7 +82,7 @@ class ReActAgent:
 
     def _register_tools(self, tools: List[str]) -> None:
         """Register a list of tool instances."""
-        print(f"[Register Tools] {tools}")
+        # print(f"[Register Tools] {tools}")
         for name in tools:
             if name not in TOOL_REGISTRY:
                 raise ValueError(f"Unknown tool '{name}'. Must be one of: {list(TOOL_REGISTRY)}")
@@ -232,7 +232,7 @@ class ReActAgent:
 
     def _handle_parse_error(self, error: str) -> None:
         """Handle tool call parsing error and raise ParseError."""
-        print(f"[Agent Step Error] Converter failed to parse tool call: {error}")
+        # print(f"[Agent Step Error] Converter failed to parse tool call: {error}")
         guidance = TOOL_CALL_PARSE_ERROR_GUIDANCE.format(error=error)
 
         self.history.add_tool_error(error)
@@ -242,12 +242,13 @@ class ReActAgent:
 
     def _handle_no_tool_call(self, response_str: str) -> None:
         """Handle case when no tool call is detected and raise NoToolCall."""
-        print(f"[Agent Step {self.step_count}] No tool call found in response")
+        # print(f"[Agent Step {self.step_count}] No tool call found in response")
 
         # Check if response was likely truncated during a tool call
         if check_truncated_tool_call(response_str):
-            print("[ERROR] Tool call appears incomplete - likely truncated!")
-            print(f"[ERROR] Last 500 chars: {response_str[-500:]}")
+            # print("[ERROR] Tool call appears incomplete - likely truncated!")
+            # print(f"[ERROR] Last 500 chars: {response_str[-500:]}")
+            pass
 
         self.history.add_user_guidance(NO_TOOL_CALL_DETECTED_GUIDANCE)
         raise NoToolCall()
@@ -302,10 +303,10 @@ class ReActAgent:
 
             if self._debug:
                 preview = format_output_preview(output)
-                print(f"[Tool Output Preview] {preview}")
+                # print(f"[Tool Output Preview] {preview}")
 
         except Exception as e:
-            print(f"[Agent Step Error] Error appending tool output to messages: {str(e)}")
+            # print(f"[Agent Step Error] Error appending tool output to messages: {str(e)}")
             self.history.add_tool_error(str(e), tool_call_id)
 
     async def step(self):
@@ -315,7 +316,7 @@ class ReActAgent:
             Tuple of (done, finish_reason, result)
         """
         self.step_count += 1
-        print(f"[Agent Step {self.step_count}] instance={self.instance_id} traj={self.trajectory_id}")
+        # print(f"[Agent Step {self.step_count}] instance={self.instance_id} traj={self.trajectory_id}")
 
         result = None
 
@@ -325,7 +326,7 @@ class ReActAgent:
 
             # Check context window
             if self.response_token_len >= self.max_prompt_length:
-                print("[Agent Step] Stopping reason: context_window_exceeded. Stopping agent.")
+                # print("[Agent Step] Stopping reason: context_window_exceeded. Stopping agent.")
                 raise ContextWindowExceeded()
 
             # 2. Generate LLM response
@@ -335,14 +336,14 @@ class ReActAgent:
                 request_id=self.agent_id,
             )
             stop_reason = meta_info["finish_reason"]
-            print(f"[Agent Step {self.step_count}] LLM response: {response_str}. Stop reason: {stop_reason}")
+            # print(f"[Agent Step {self.step_count}] LLM response: {response_str}. Stop reason: {stop_reason}")
 
             # Add assistant message to history
             self.history.add_assistant(response_str)
 
             # Check if generation stopped due to length
             if stop_reason == "length":
-                print(f"[Agent Step] Stopping reason: {stop_reason}. Stopping agent.")
+                # print(f"[Agent Step] Stopping reason: {stop_reason}. Stopping agent.")
                 raise ContextWindowExceeded()
 
             # 3. Parse tool call from response
@@ -354,7 +355,7 @@ class ReActAgent:
 
             # Handle no tools scenario
             if not self.tools:
-                print(f"[Agent Step {self.step_count}] No tools provided, returning response.")
+                # print(f"[Agent Step {self.step_count}] No tools provided, returning response.")
                 result = StepResult.finished("FINISH", response_str)
 
             # Handle no tool call detected
@@ -376,7 +377,7 @@ class ReActAgent:
 
                     # 6. Check if finish tool was called
                     if tool_name == "finish":
-                        print(f"[Agent Step {self.step_count}] Finish tool called. Stopping agent.")
+                        # print(f"[Agent Step {self.step_count}] Finish tool called. Stopping agent.")
                         result = StepResult.finished("FINISH_TOOL", output)
                     else:
                         # Continue agent loop
@@ -386,10 +387,11 @@ class ReActAgent:
                         # Some tools (like next_with_summary) embed feedback in user message
                         # and return None to skip adding tool output
                         if output is not None:
-                            print(f"[Tool Output step {self.step_count}] {output}")
+                            # print(f"[Tool Output step {self.step_count}] {output}")
                             self._append_tool_output(output, tool_call_id)
                         else:
-                            print(f"[Tool Output step {self.step_count}] No output (feedback embedded in user message)")
+                            # print(f"[Tool Output step {self.step_count}] No output (feedback embedded in user message)")
+                            pass
 
         except StepException as e:
             # Handle expected control flow exceptions
@@ -397,7 +399,7 @@ class ReActAgent:
 
         except Exception as e:
             # Handle unexpected errors
-            print(f"[Agent Step Error] Error during step: {str(e)}")
+            # print(f"[Agent Step Error] Error during step: {str(e)}")
             result = StepResult.finished(f"error: {str(e)}", None)
 
         # Single exit point
@@ -418,9 +420,9 @@ class ReActAgent:
                     break
             except Exception as e:
                 finish_reason = f"error: {str(e)}"
-                print(f"[Agent Run Error] Exception during step: {str(e)}")
+                # print(f"[Agent Run Error] Exception during step: {str(e)}")
                 # traceback
-                print(traceback.format_exc())
+                # print(traceback.format_exc())
                 break
         else:  # If we exit the loop without hitting a break, it means we reached max iterations
             finish_reason = "max_iterations_reached"
@@ -553,6 +555,6 @@ if __name__ == "__main__":
     # Run the agent
     finish_reason, result = asyncio.run(agent.run(instruction))
 
-    print(agent.get_messages())
-    print(f"Finish Reason: {finish_reason}")
-    print(f"Result: {result}")
+    # print(agent.get_messages())
+    # print(f"Finish Reason: {finish_reason}")
+    # print(f"Result: {result}")

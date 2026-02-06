@@ -12,7 +12,7 @@ class GeneralReactTask(BaseTask):
 
     @classmethod
     def get_instruction(cls, instance: Dict[str, Any]) -> str:
-        print(instance)
+        # print(instance)
         # (TODO) Dacheng: A hack to make inference only compatible.
         # During inference, the key is "prompt"
         # During training, the key is "raw_prompt"
@@ -29,7 +29,7 @@ class GeneralReactTask(BaseTask):
         else:
             prompt = instance.get("prompt")
 
-        print(f"Prompt: {prompt}")
+        # print(f"Prompt: {prompt}")
 
         # assume prompt is a list of messages
         assert isinstance(prompt, list), f"Prompt must be a list, but got {type(prompt)}"
@@ -91,7 +91,7 @@ class GeneralReactTask(BaseTask):
                 assert False, f"Data source {data_source} is not supported for ReAct agent."
             prompt = [system_prompt] + prompt
 
-        print(f"Prompt after system prompt: {prompt}")
+        # print(f"Prompt after system prompt: {prompt}")
         return prompt
 
     @classmethod
@@ -102,10 +102,10 @@ class GeneralReactTask(BaseTask):
     async def evaluate_result(
         cls, result: any, instance: any, data_source: str, instance_id: int, trajectory_id: int
     ) -> float:
-        # print(f"Evaluating result: {result=} {instance=} {data_source=} {instance_id=} {trajectory_id=}")
+        # # print(f"Evaluating result: {result=} {instance=} {data_source=} {instance_id=} {trajectory_id=}")
         ground_truth = instance["reward_model"]["ground_truth"]
         extra_info = instance["extra_info"]
-        print(f"Evaluating result: {result=}")
+        # print(f"Evaluating result: {result=}")
         if not result:
             return 0.0
         if data_source == "ToRL":
@@ -115,55 +115,55 @@ class GeneralReactTask(BaseTask):
         elif data_source.startswith("math"):
             from skyrl_agent.tasks.verifiers import naive_dapo
 
-            print(f"Evaluating math task with data_source: {data_source}, got {result=} {ground_truth=} {extra_info=}")
+            # print(f"Evaluating math task with data_source: {data_source}, got {result=} {ground_truth=} {extra_info=}")
             res = naive_dapo.compute_score(result, ground_truth, extra_info=extra_info)
-            print(f"Evaluated math task with data_source: {data_source}, got {res=}")
+            # print(f"Evaluated math task with data_source: {data_source}, got {res=}")
             return res["score"]
         # code generation
         elif data_source.startswith("codegen"):
             from skyrl_agent.tasks.verifiers import coder1
 
-            # print(f"Getting result {result}")
-            print(f"Evaluating codegen task with data_source: {data_source}, got {result=}")
+            # # print(f"Getting result {result}")
+            # print(f"Evaluating codegen task with data_source: {data_source}, got {result=}")
             res = coder1.compute_score(result, ground_truth, extra_info=extra_info)
-            print(f"Evaluated codegen task with data_source: {data_source}, got {res=}")
-            # print(f"Evaluating codegen task with data_source: {data_source}, got {score=} {extracted_model_output=}")
-            print(f"Evaluating codegen task with data_source: {data_source}, got {res['score']=}")
+            # print(f"Evaluated codegen task with data_source: {data_source}, got {res=}")
+            # # print(f"Evaluating codegen task with data_source: {data_source}, got {score=} {extracted_model_output=}")
+            # print(f"Evaluating codegen task with data_source: {data_source}, got {res['score']=}")
             return res["score"]
         elif data_source in ["2wikimultihopqa", "bamboogle", "hotpotqa", "musique", "nq", "popqa", "triviaqa"]:
             ground_truth = instance["reward_model"]["ground_truth"]
             from skyrl_agent.tasks.verifiers import qa
 
-            print(f"Evaluating nq / hotpotqa like task with data_source: {data_source}, got {result=}")
+            # print(f"Evaluating nq / hotpotqa like task with data_source: {data_source}, got {result=}")
             res = qa.compute_score_em(result, ground_truth)
-            print(f"Evaluated nq / hotpotqa like task with data_source: {data_source}, got {res=}")
+            # print(f"Evaluated nq / hotpotqa like task with data_source: {data_source}, got {res=}")
             return res["score"]
         elif data_source.startswith("browsecomp"):
             ground_truth = instance["reward_model"]["ground_truth"]
             from skyrl_agent.tasks.verifiers import qa
 
-            print(f"Evaluating {data_source} task with data_source: {data_source}, got {result=}")
+            # print(f"Evaluating {data_source} task with data_source: {data_source}, got {result=}")
             # FIXME: This is a hack to get the question from the prompt. Now inference only supports prompt, not raw_prompt.
             if "raw_prompt" in instance:
                 question = instance["raw_prompt"][0]["content"].replace("Answer the given question:", "")
             else:
                 question = instance["prompt"][0]["content"].replace("Answer the given question:", "")
-            print(f"during evaluation, Question: {question}")
+            # print(f"during evaluation, Question: {question}")
             res = await call_sync_from_async(qa.compute_score_browsecomp, result, ground_truth, question)
-            print(f"Evaluated {data_source} task with data_source: {data_source}, got {res=}")
+            # print(f"Evaluated {data_source} task with data_source: {data_source}, got {res=}")
             return res["score"]
         elif data_source.startswith("ruler"):
             from skyrl_agent.tasks.verifiers import qa
 
             ground_truth = instance["reward_model"]["ground_truth"]
-            print(f"Evaluating ruler task with data_source: {data_source}, got {result=}")
+            # print(f"Evaluating ruler task with data_source: {data_source}, got {result=}")
             if "raw_prompt" in instance:
                 question = instance["raw_prompt"][0]["content"]
             else:
                 question = instance["prompt"][0]["content"]
-            print(f"Question: {question}")
+            # print(f"Question: {question}")
             res = await call_sync_from_async(qa.compute_score_ruler, result, ground_truth, question)
-            print(f"Evaluated ruler task with data_source: {data_source}, got {res=}")
+            # print(f"Evaluated ruler task with data_source: {data_source}, got {res=}")
             return res["score"]
         else:
             raise NotImplementedError(f"Reward function is not implemented for {data_source=}")
@@ -190,4 +190,4 @@ if __name__ == "__main__":
     solution_str = "\\boxed{1}"
     ground_truth = "1"
     instance = {"reward_model": {"ground_truth": ground_truth}, "extra_info": {}}
-    print(asyncio.run(GeneralReactTask.evaluate_result(solution_str, instance, "math", 0, 0)))
+    # print(asyncio.run(GeneralReactTask.evaluate_result(solution_str, instance, "math", 0, 0)))

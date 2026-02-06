@@ -76,7 +76,7 @@ def record_transition(func):
         # Call the original function (LLM generation)
         result = await func(self, *args, **kwargs)
         response_str, meta_info = result
-        print(f"response_str: {response_str}")
+        # print(f"response_str: {response_str}")
 
         # Extract action information
         output_tokens = meta_info.get("output_tokens", [])
