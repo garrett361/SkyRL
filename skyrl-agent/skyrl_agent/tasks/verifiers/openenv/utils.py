@@ -76,91 +76,50 @@ def call_openenv_api(
 
 
 def _build_fn_wrapper(generation: str, fn_name: str, stdin_data: Any) -> str:
-    """Build the function-call wrapper with stdin embedded as a string literal."""
+    """Build a wrapper that calls a global function from the user's generation.
+
+    TORL-only scope:
+        This wrapper only supports global (module-level) function definitions.
+        It does NOT handle LeetCode-style ``class Solution`` patterns — unlike
+        the sandbox_fusion verifier which supports Solution classes, stdin piping,
+        multi-language execution, and separate compile/run phases.  Those features
+        are unnecessary for TORL, where the agent generates complete runnable
+        Python code and we only need the fn_name path for coding-benchmark
+        evaluation with simple global functions.
+
+    OpenEnv constraints vs sandbox_fusion:
+        - OpenEnv's smolagents ``LocalPythonExecutor`` uses AST evaluation, not
+          ``exec``, so ``globals()`` and ``__name__`` are forbidden.
+        - There is no stdin field in ``CodeAction``; input data is embedded as
+          a string literal via ``json.dumps(str(stdin_data))``.
+        - Only ``json``, ``sys``, and ``traceback`` are imported beyond
+          smolagents' defaults (these must be in the executor's allow-list).
+    """
     embedded_input = json.dumps(str(stdin_data))
-    return f"""
-import traceback
-from string import *
-from re import *
-from datetime import *
-from collections import *
-from heapq import *
-from bisect import *
-from copy import *
-from math import *
-from random import *
-from statistics import *
-from itertools import *
-from functools import *
-from operator import *
-from io import *
-from sys import *
-from json import *
-from builtins import *
-from typing import *
-import string
-import re
-import datetime
-import collections
-import heapq
-import bisect
-import copy
-import math
-import random
-import statistics
-import itertools
-import functools
-import operator
-import io
+    return f"""import json
 import sys
-import json
+import traceback
 
 # === User's Original Code START ===
 {generation}
 # === User's Original Code END ===
 
-_SANDBOX_FN_NAME = "{fn_name}"
+_raw_input_str = {embedded_input}
+_args = []
+if _raw_input_str.strip():
+    _args = [json.loads(line) for line in _raw_input_str.split('\\n') if line.strip()]
 
-def _execute_user_function():
-    _raw_input_str = {embedded_input}
-    _args = []
-    if _raw_input_str.strip():
-        try:
-            _args = [json.loads(line) for line in _raw_input_str.split('\\n')]
-        except json.JSONDecodeError as _je:
-            sys.stderr.write(f"WrapperError: Invalid JSON input for '{{_SANDBOX_FN_NAME}}': {{_je}}\\nInput was: "
-                              f"{{_raw_input_str[:200]}}\\n")
-            return None, True
+try:
+    _fn_result = {fn_name}(*_args)
 
-    try:
-        _target_callable = None
-        if _SANDBOX_FN_NAME in globals():
-            _target_callable = globals()[_SANDBOX_FN_NAME]
-        elif 'Solution' in globals():
-            _Solution_class = globals()['Solution']
-            _solution_instance = _Solution_class()
-            _target_callable = getattr(_solution_instance, _SANDBOX_FN_NAME)
-
-        if not _target_callable:
-            sys.stderr.write(f"WrapperError: Function or method '{{_SANDBOX_FN_NAME}}' not found.\\n")
-            return None, True
-
-        _fn_result = _target_callable(*_args)
-        return _fn_result, False
-    except Exception:
-        sys.stderr.write(f"Error during setup or execution of '{{_SANDBOX_FN_NAME}}':\\n{{traceback.format_exc()}}\\n")
-        return None, True
-
-if __name__ == '__main__':
-    _result, _error_occurred = _execute_user_function()
-
-    if not _error_occurred:
-        if isinstance(_result, (dict, list, tuple)) or _result is None or isinstance(_result, bool):
-            print(json.dumps(_result))
-        elif isinstance(_result, (int, float, str)):
-            print(str(_result))
-        else:
-            print(str(_result))
+    if isinstance(_fn_result, (dict, list, tuple)) or _fn_result is None or isinstance(_fn_result, bool):
+        print(json.dumps(_fn_result))
+    elif isinstance(_fn_result, (int, float, str)):
+        print(str(_fn_result))
+    else:
+        print(str(_fn_result))
+except Exception:
+    sys.stderr.write(f"Error executing '{fn_name}':\\n{{traceback.format_exc()}}\\n")
 """
 
 

@@ -252,7 +252,7 @@ class TestProcessSingleCase:
         )
 
         sent_code = mock_api.call_args[0][1]  # second positional arg is code
-        assert "_execute_user_function" in sent_code
+        assert "add(*_args)" in sent_code
         assert "def add(a, b): return a + b" in sent_code
 
     @patch(f"{MOCK_MODULE}.call_openenv_api")
@@ -397,5 +397,5 @@ class TestCheckCorrectness:
         check_correctness(OPENENV_URL, in_outs, "def solve(x): return 42", timeout=10)
 
         sent_code = mock_api.call_args[0][1]
-        assert "_execute_user_function" in sent_code
-        assert "solve" in sent_code
+        assert "solve(*_args)" in sent_code
+        assert "def solve(x): return 42" in sent_code
