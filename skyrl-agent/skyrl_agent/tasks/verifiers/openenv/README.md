@@ -21,7 +21,7 @@ The verifier is server-agnostic — it only speaks HTTP to `POST /step`. Two ser
 | Package | Entrypoint | Executor | State between steps | Use case |
 |---------|-----------|----------|---------------------|----------|
 | `coding_env` | `coding_env.server.app:app` | `PyExecutor` (in-process) | Persists | Interactive / WebSocket sessions |
-| `memlimited_coding_env` | `memlimited_coding_env.server.app:app` | `SubprocessPyExecutor` (fork + RLIMIT_AS/CPU) | Does not persist | TORL training (stateless HTTP, memory-safe) |
+| `memlimited_coding_env` | `memlimited_coding_env.server.app:app` | `SubprocessPyExecutor` (fork + RLIMIT, import guards, audit hooks) | Does not persist | TORL training (stateless HTTP, memory-safe) |
 
 The `coding_env` env is from upstream OpenEnv. The memlimited version is a custom subclass of the
 first.
