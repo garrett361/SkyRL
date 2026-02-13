@@ -21,7 +21,7 @@ app = create_app(
     CodeAction,
     CodeObservation,
     env_name="coding_env",
-    max_concurrent_envs=int(os.environ.get("OPENENV_MAX_CONCURRENT_ENVS", 256)),
+    max_concurrent_envs=int(os.environ.get("MAX_CONCURRENT_ENVS", 256)),
 )
 
 
