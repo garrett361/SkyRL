@@ -35,13 +35,13 @@ class OpenEnvWSCodeInterpreter(BaseTool):
         self._session: Optional[CodingEnv] = None
         self._event_loop: Optional[asyncio.AbstractEventLoop] = None
 
-    def set_session(
+    def set_ws_session(
         self, session: CodingEnv, event_loop: asyncio.AbstractEventLoop
     ) -> None:
         self._session = session
         self._event_loop = event_loop
 
-    def close_session(self) -> None:
+    def close_ws_session(self) -> None:
         self._session = None
         self._event_loop = None
 
@@ -49,7 +49,7 @@ class OpenEnvWSCodeInterpreter(BaseTool):
         if self._session is None or self._event_loop is None:
             raise RuntimeError(
                 "WebSocket session not initialized. "
-                "Call set_session() before executing code."
+                "Call set_ws_session() before executing code."
             )
 
         from coding_env.models import CodeAction

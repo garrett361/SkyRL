@@ -58,11 +58,11 @@ class TestSessionManagement:
         mock_session = MagicMock()
         mock_loop = MagicMock()
 
-        tool.set_session(mock_session, mock_loop)
+        tool.set_ws_session(mock_session, mock_loop)
         assert tool._session is mock_session
         assert tool._event_loop is mock_loop
 
-        tool.close_session()
+        tool.close_ws_session()
         assert tool._session is None
         assert tool._event_loop is None
 
@@ -72,7 +72,7 @@ class TestCodeExecution:
         step_result = _make_step_result(stdout="42\n")
         session, loop, thread = _make_session_and_loop(step_result)
         try:
-            tool.set_session(session, loop)
+            tool.set_ws_session(session, loop)
             result = tool.call({"code": "print(42)"})
             assert result == "42\n"
             session.step.assert_called_once()
@@ -85,7 +85,7 @@ class TestCodeExecution:
         step_result = _make_step_result(stdout="42\n")
         session, loop, thread = _make_session_and_loop(step_result)
         try:
-            tool.set_session(session, loop)
+            tool.set_ws_session(session, loop)
             tool.call({"code": "```python\nprint(42)\n```"})
             action_arg = session.step.call_args[0][0]
             assert "```" not in action_arg.code
@@ -105,7 +105,7 @@ class TestCodeExecution:
         )
         session, loop, thread = _make_session_and_loop(step_result)
         try:
-            tool.set_session(session, loop)
+            tool.set_ws_session(session, loop)
             result = tool.call({"code": "print('partial'); x"})
             assert "partial\n" in result
             assert "NameError" in result
@@ -118,7 +118,7 @@ class TestCodeExecution:
         step_result = _make_step_result(stdout="42\n")
         session, loop, thread = _make_session_and_loop(step_result)
         try:
-            tool.set_session(session, loop)
+            tool.set_ws_session(session, loop)
             result = tool.call(json.dumps({"code": "print(42)"}))
             assert result == "42\n"
         finally:
