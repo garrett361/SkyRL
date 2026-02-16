@@ -3,3 +3,7 @@ from skyrl_agent.servers.memlimited_coding_env import (  # noqa: F401
     MemlimitedPythonCodeActEnv,
     SubprocessPyExecutor,
 )
+from skyrl_agent.servers.memlimited_persistent_coding_env import (  # noqa: F401
+    MemlimitedPersistentPythonCodeActEnv,
+    PersistentSubprocessPyExecutor,
+)

@@ -8,12 +8,12 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from skyrl_agent.tools.base import TOOL_REGISTRY
-from skyrl_agent.tools.openenv_ws_code_interpreter import (
-    OpenEnvWSCodeInterpreter,
-    _post_process_code,
-    _strip_markdown_fences,
-    _wrap_last_expr_in_print,
+from skyrl_agent.tools.code_postprocess import (
+    post_process_code as _post_process_code,
+    strip_markdown_fences as _strip_markdown_fences,
+    wrap_last_expr_in_print as _wrap_last_expr_in_print,
 )
+from skyrl_agent.tools.openenv_ws_code_interpreter import OpenEnvWSCodeInterpreter
 
 
 @pytest.fixture

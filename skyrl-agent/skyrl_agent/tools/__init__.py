@@ -8,3 +8,4 @@ from .local_search import LocalSearchTool
 from .next_memagent import NextWithSummary
 from .search import FaissSearch
 from .openenv_ws_code_interpreter import OpenEnvWSCodeInterpreter
+from .openenv_ws_persistent_code_interpreter import OpenEnvWSPersistentCodeInterpreter
