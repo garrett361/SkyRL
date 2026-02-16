@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import asyncio
+import itertools
 import logging
 import os
+from functools import lru_cache
 
 import pandas as pd
 
@@ -11,8 +13,21 @@ from skyrl_agent.tools.ws_session import WSSessionTool
 
 logger = logging.getLogger(__name__)
 
-WS_CONNECT_TIMEOUT_S = 30.0
+WS_CONNECT_TIMEOUT_S = 60.0
 WS_MESSAGE_TIMEOUT_S = 120.0
+WS_CONNECT_MAX_RETRIES = 3
+WS_CONNECT_RETRY_DELAY_S = 5.0
+
+_url_counter = itertools.count()
+
+
+@lru_cache(maxsize=1)
+def _get_openenv_urls() -> list[str]:
+    """Parse OPENENV_URLS (comma-separated) into a list of base URLs."""
+    raw = os.environ.get("OPENENV_URLS", "http://localhost:8000")
+    urls = [u.strip() for u in raw.split(",") if u.strip()]
+    logger.info("OpenEnv server URLs: %s", urls)
+    return urls
 
 
 class OpenEnvReActTrajectory(ReActTrajectory):
@@ -41,13 +56,25 @@ class OpenEnvReActTrajectory(ReActTrajectory):
             # CodeAction/CodeObservation/CodeState types and /ws endpoint.
             from coding_env.client import CodingEnv
 
-            openenv_url = os.environ.get("OPENENV_URL", "http://localhost:8000")
+            urls = _get_openenv_urls()
+            openenv_url = urls[next(_url_counter) % len(urls)]
             env = CodingEnv(
                 base_url=openenv_url,
                 connect_timeout_s=WS_CONNECT_TIMEOUT_S,
                 message_timeout_s=WS_MESSAGE_TIMEOUT_S,
             )
-            await env.connect()
+            for attempt in range(1, WS_CONNECT_MAX_RETRIES + 1):
+                try:
+                    await env.connect()
+                    break
+                except (ConnectionError, TimeoutError) as e:
+                    if attempt == WS_CONNECT_MAX_RETRIES:
+                        raise
+                    logger.warning(
+                        "WS connect to %s failed (attempt %d/%d): %s. Retrying in %.0fs...",
+                        openenv_url, attempt, WS_CONNECT_MAX_RETRIES, e, WS_CONNECT_RETRY_DELAY_S,
+                    )
+                    await asyncio.sleep(WS_CONNECT_RETRY_DELAY_S)
             await env.reset()
             loop = asyncio.get_running_loop()
             for tool in ws_tools:

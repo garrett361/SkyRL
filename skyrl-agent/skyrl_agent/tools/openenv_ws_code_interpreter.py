@@ -1,11 +1,12 @@
 from __future__ import annotations
 
+import ast
 import asyncio
 import logging
+import re
 from typing import TYPE_CHECKING, Optional, Union
 
 from skyrl_agent.tools.base import BaseTool, register_tool
-from skyrl_agent.tools.sandbox_fusion import CodeInterpreter
 
 if TYPE_CHECKING:
     from coding_env.client import CodingEnv
@@ -13,6 +14,62 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 DEFAULT_TIMEOUT_S = 60.0
+
+
+def _strip_markdown_fences(code: str) -> str:
+    """Remove markdown code block delimiters (```python ... ```)."""
+    code = re.sub(r"^```\w*\s*\n?", "", code.strip(), flags=re.MULTILINE)
+    code = re.sub(r"\n?```\s*$", "", code, flags=re.MULTILINE)
+    code = code.replace("```", "")
+    return code.strip()
+
+
+def _wrap_last_expr_in_print(code: str) -> str:
+    """If the last statement is a bare expression, wrap it in print().
+
+    Uses AST parsing to correctly handle trailing comments, multiline
+    expressions, and other edge cases that naive string manipulation
+    gets wrong (e.g. ``x  # comment`` -> ``print(x  # comment)`` breaks).
+    """
+    try:
+        tree = ast.parse(code)
+    except SyntaxError:
+        return code
+
+    if not tree.body:
+        return code
+
+    last_stmt = tree.body[-1]
+    if not isinstance(last_stmt, ast.Expr):
+        return code
+
+    # Already a print() call — nothing to do
+    if (
+        isinstance(last_stmt.value, ast.Call)
+        and isinstance(last_stmt.value.func, ast.Name)
+        and last_stmt.value.func.id == "print"
+    ):
+        return code
+
+    # Use ast.unparse to get the expression without comments, then wrap.
+    # This avoids the bug where trailing comments swallow the closing paren.
+    expr_source = ast.unparse(last_stmt.value)
+    wrapped = f"print({expr_source})"
+
+    lines = code.split("\n")
+    start = last_stmt.lineno - 1
+    end = last_stmt.end_lineno  # end_lineno is 1-indexed inclusive
+    lines[start:end] = [wrapped]
+    return "\n".join(lines)
+
+
+def _post_process_code(code: str) -> str:
+    """Clean markdown fences and ensure the last expression is printed."""
+    if not code:
+        return code
+    code = _strip_markdown_fences(code)
+    code = _wrap_last_expr_in_print(code)
+    return code
 
 
 @register_tool("openenv_ws_code_interpreter")
@@ -68,7 +125,7 @@ class OpenEnvWSCodeInterpreter(BaseTool):
             return {"error": f"Invalid parameters: {exc}"}
 
         code = params.get("code", "")
-        code = CodeInterpreter._post_process_code(code)
+        code = _post_process_code(code)
 
         if not code:
             return {"error": "Code parameter is required."}
