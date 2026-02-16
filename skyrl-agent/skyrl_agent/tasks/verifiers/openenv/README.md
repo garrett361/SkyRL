@@ -20,11 +20,10 @@ The verifier is server-agnostic — it only speaks HTTP to `POST /step`. Two ser
 
 | Package | Entrypoint | Executor | State between steps | Use case |
 |---------|-----------|----------|---------------------|----------|
-| `coding_env` | `coding_env.server.app:app` | `PyExecutor` (in-process) | Persists | Interactive / WebSocket sessions |
-| `memlimited_coding_env` | `memlimited_coding_env.server.app:app` | `SubprocessPyExecutor` (fork + RLIMIT, import guards, audit hooks) | Does not persist | TORL training (stateless HTTP, memory-safe) |
+| `coding_env` (upstream OpenEnv) | `skyrl_agent.servers.coding_env.app:app` | `PyExecutor` (smolagents AST interpreter) | Persists | Interactive / WebSocket sessions |
+| `memlimited_coding_env` (SkyRL) | `skyrl_agent.servers.memlimited_coding_env.app:app` | `SubprocessPyExecutor` (fork + RLIMIT, import guards, audit hooks) | Does not persist | TORL training (stateless HTTP, memory-safe) |
 
-The `coding_env` env is from upstream OpenEnv. The memlimited version is a custom subclass of the
-first.
+`MemlimitedPythonCodeActEnv` subclasses `PythonCodeActEnv` but replaces the executor with `SubprocessPyExecutor`, which spawns a fresh child process per step with `RLIMIT_AS` and `RLIMIT_CPU` limits.
 
 For TORL training, use `memlimited_coding_env` — it prevents agent-generated code from OOM-ing the server.
 
