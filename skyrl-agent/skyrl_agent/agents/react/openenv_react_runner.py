@@ -15,6 +15,7 @@ logger = logging.getLogger(__name__)
 
 WS_CONNECT_TIMEOUT_S = 60.0
 WS_MESSAGE_TIMEOUT_S = 120.0
+WS_PING_TIMEOUT_S = 120.0
 WS_CONNECT_MAX_RETRIES = 3
 WS_CONNECT_RETRY_DELAY_S = 5.0
 
@@ -75,6 +76,11 @@ class OpenEnvReActTrajectory(ReActTrajectory):
                         openenv_url, attempt, WS_CONNECT_MAX_RETRIES, e, WS_CONNECT_RETRY_DELAY_S,
                     )
                     await asyncio.sleep(WS_CONNECT_RETRY_DELAY_S)
+            # Extend the keepalive ping timeout on the underlying websocket
+            # connection. The default (20s) is too short for persistent servers
+            # where reset()/step() can take longer due to subprocess spawning.
+            if hasattr(env, "_ws") and env._ws is not None:
+                env._ws.ping_timeout = WS_PING_TIMEOUT_S
             await env.reset()
             loop = asyncio.get_running_loop()
             for tool in ws_tools:
