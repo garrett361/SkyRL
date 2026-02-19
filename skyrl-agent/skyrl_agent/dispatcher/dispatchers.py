@@ -182,3 +182,37 @@ async def async_fix_pool_dispatcher(cfg, init_fn, run_fn, eval_fn):
             w.cancel()
 
     await dispatcher()
+
+
+@register_dispatcher("async_semaphore")
+async def async_semaphore_dispatcher(
+    cfg, trajectories: Dict[str, Dict[str, Any]], init_fn: str, run_fn: str, eval_fn: str
+):
+    num_instances = cfg["num_instances"]
+    num_trajectories = cfg["num_trajectories"]
+    max_parallel_agents = min(
+        num_instances * num_trajectories,
+        cfg["max_parallel_agents"],
+    )
+
+    logger.info(
+        f"Using semaphore dispatcher with max_parallel_agents={max_parallel_agents} "
+        f"for {num_instances} instances with {num_trajectories} trajectories each"
+    )
+
+    semaphore = asyncio.Semaphore(max_parallel_agents)
+
+    async def one_traj(instance_id, trajectory_id):
+        async with semaphore:
+            traj = trajectories[instance_id][trajectory_id]
+            if init_fn is not None:
+                await getattr(traj, init_fn)()
+            await getattr(traj, run_fn)()
+            await getattr(traj, eval_fn)()
+
+    tasks = []
+    for instance_id in trajectories.keys():
+        for trajectory_id in range(num_trajectories):
+            tasks.append(asyncio.create_task(one_traj(instance_id, trajectory_id)))
+
+    await asyncio.gather(*tasks)
